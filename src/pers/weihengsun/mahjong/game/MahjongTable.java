@@ -14,6 +14,8 @@ public class MahjongTable{
 	private static final int GANG = 50;
 	private static final int HU = 0;
 //	private static final int again = 60;
+	
+	public static final int NUM_OF_TILES = 136;
 	// if hu or not
 	private boolean hasWinner = false;
 	
@@ -51,9 +53,9 @@ public class MahjongTable{
 	MahjongTable(PrintWriter[] writers){ //构造函数
 
 		this.writers = writers;
-		this.deck = new int[136]; //创建牌库对象
+		this.deck = new int[NUM_OF_TILES]; //创建牌库对象
 		this.top = 0;
-		this.bottom = 135;
+		this.bottom = NUM_OF_TILES - 1;
 		this.zhuangNum = 0; //第一局“東”坐庄
 		this.discardPile = new Hashtable<Integer,Integer>();
 		this.turn = this.zhuangNum;

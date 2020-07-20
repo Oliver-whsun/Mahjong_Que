@@ -1,3 +1,5 @@
+package pers.weihengsun.mahjong.game;
+
 import java.util.*;
 
 public class Player{

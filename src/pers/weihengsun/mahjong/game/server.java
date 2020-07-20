@@ -1,6 +1,8 @@
+package pers.weihengsun.mahjong.game;
+
 import java.net.*;
 import java.io.*;
-import java.util.*;
+
 
 // server class
 class server {
@@ -69,7 +71,7 @@ class server {
 	// the limit numebr of player
 	private final int limitSize = 4;
 	// clients
-	private client[] clients = new client[limitSize];
+	//private client[] clients = new client[limitSize];
 	// thread pool
 	private Thread[] thPool = new Thread[limitSize];
 	// writer array

@@ -1,6 +1,8 @@
+package pers.weihengsun.mahjong.game;
+
 import java.net.*;
 import java.io.*;
-import java.util.*;
+
 import javax.swing.JOptionPane;
 
 // client class
