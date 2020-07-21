@@ -5,34 +5,36 @@ import java.util.*;
 
 public class MahjongTable{
 	// operation code
-	private static final int MO = 10;
-	private static final int FA = 11;
-	private static final int MO_FROM_BOTTOM = 12;
-	private static final int DA = 20;
-	private static final int CHI = 30;
-	private static final int PENG = 40;
-	private static final int GANG = 50;
-	private static final int HU = 0;
+	// client 与 server 之间交互时用到的操作规范码
+	public static final int MO = 10; //draw a tile, 玩家摸牌
+	public static final int FA = 11; //distribute a tile, 系统发牌 
+	public static final int MO_FROM_BOTTOM = 12; //draw a tile from bottom, 杠底摸牌
+	public static final int DA = 20; //discard a tile, 玩家打牌
+	public static final int CHI = 30; //玩家吃牌
+	public static final int PENG = 40; //玩家碰牌
+	public static final int GANG = 50; //玩家杠牌
+	public static final int HU = 0; //玩家胡牌
 //	private static final int again = 60;
 	
-	public static final int NUM_OF_TILES = 136;
-	// if hu or not
-	private boolean hasWinner = false;
+	public static final int NUM_OF_TILES = 136; //麻将牌总数，136 = 9*3*4 + 7*4
+	public static final int NUM_OF_HANDS = 13; //标准手牌数，即无摸牌、无副露时应该有13张手牌
+	
+	private boolean hasWinner = false; // if hu or not, 当前局是否有玩家胡牌
 	
 	/*
 	牌用数字表示
 
-	数字 {01 ~ 09} 表示  {1 ~ 9} 万
+	数字 {11 ~ 19} 表示  {1 ~ 9} 万
 
-	数字 {11 ~ 19} 表示  {1 ~ 9} 条
+	数字 {21 ~ 29} 表示  {1 ~ 9} 条
 
-	数字 {21 ~ 29} 表示  {1 ~ 9} 筒
+	数字 {31 ~ 39} 表示  {1 ~ 9} 筒
 
-	数字 {31 33 35 37 } 表示 { 东 南 西 北 }
+	数字 {41 43 45 47 } 表示 { 东 南 西 北 }
 
-	数字 {41 43 45} 表示 {中 發 白}
+	数字 {51 53 55} 表示 {中 發 白}
 	*/
-	public static String[] n2p = { // 编码表
+	public static final String[] NUMBER_2_TILE = { // 编码表
 		"无效","无效","无效","无效","无效","无效","无效","无效","无效","无效",
 		"无效","一萬","二萬","三萬","四萬","五萬","六萬","七萬","八萬","九萬",
 		"无效","一条","二条","三条","四条","五条","六条","七条","八条","九条",
@@ -40,12 +42,11 @@ public class MahjongTable{
 		"无效","東风","无效","南风","无效","西风","无效","北风","无效","无效",
 		"无效","红中","无效","發财","无效","白板"};
 
-	int[] deck = null; //牌库：长度136(牌的总数，不含花牌)，内容是牌的数字
-	int top; //牌库顶指针(角标)
-	int bottom; //牌库底指针(角标)
-	int zhuangNum; //庄家玩家编号
-	// turn of player
-	int turn;
+	private int[] deck = null; //牌库：长度136(牌的总数，不含花牌)，内容是牌的数字
+	private int top; //牌库顶指针(角标)
+	private int bottom; //牌库底指针(角标)
+	public int whoIsZhuang; //庄家玩家编号
+	public int whoseTurn; // turn of player, 当前轮次玩家编号
 	Hashtable<Integer, Integer> discardPile = null; //弃牌堆，key是牌的编号，value是已经出现的张数(包括打掉的，吃碰杠亮出来的)
 	// writers
 	PrintWriter[] writers;
@@ -56,9 +57,9 @@ public class MahjongTable{
 		this.deck = new int[NUM_OF_TILES]; //创建牌库对象
 		this.top = 0;
 		this.bottom = NUM_OF_TILES - 1;
-		this.zhuangNum = 0; //第一局“東”坐庄
+		this.whoIsZhuang = 0; //第一局“東”坐庄
 		this.discardPile = new Hashtable<Integer,Integer>();
-		this.turn = this.zhuangNum;
+		this.whoseTurn = this.whoIsZhuang;
 		//把136张牌按顺序放入牌库
 		//一万到九万各四张
 		int wan = 11;
@@ -112,7 +113,7 @@ public class MahjongTable{
 	public void shuffle(){ //成员函数，洗牌，重置牌库顶、底角标，重置弃牌堆
 		System.out.println("正在洗牌");
 		this.top = 0;
-		this.bottom = 135;
+		this.bottom = NUM_OF_TILES -1;
 		this.discardPile = new Hashtable<Integer,Integer>();
 		int length = deck.length;
 		Random rand = new Random();
@@ -129,44 +130,42 @@ public class MahjongTable{
 	}
 
 	// public boolean needHandle = false;
-	// distribute pai to players
+	
+	// distribute tile to players, 发牌函数
 	public void distribute() {
-		int round = 11;
+		//先发 NUM_OF_HANDS-1 张牌，最后一轮次为跳牌轮次（庄两张，他人一张）
+		int rounds = NUM_OF_HANDS -1;
 		String cmd = "";
-		while(round >= 0) {
+		while(rounds > 0) {
 			for(int i = 0; i < 4; i++) {
-				if(deck[top] < 10) {
-					cmd = turn + "" + FA + "0" + deck[top];
-				}else {
-					cmd = turn + "" + FA + "" + deck[top];
-				}
+				cmd = whoseTurn + "" + FA + "" + deck[top];
 				boradcast(cmd);
 				top++;
 			}
-			turn++;
-			if(turn >= 4) {
-				turn = 0;
+			whoseTurn++;
+			if(whoseTurn >= 4) {
+				whoseTurn = 0;
 			}
-			round--;
+			rounds--;
 		}
 		// tiao pai
 		for(int i = 0; i < 4; i++) {
 			if(deck[top] < 10) {
-					cmd = turn + "" + FA + "0" + deck[top];
+					cmd = whoseTurn + "" + FA + "0" + deck[top];
 				}else {
-					cmd = turn + "" + FA + "" + deck[top];
+					cmd = whoseTurn + "" + FA + "" + deck[top];
 				}
 			boradcast(cmd);
 			top++;
-			turn++;
-			if(turn >= 4) {
-				turn = 0;
+			whoseTurn++;
+			if(whoseTurn >= 4) {
+				whoseTurn = 0;
 			}
 		}
 		if(deck[top] < 10) {
-			cmd = turn + "" + MO + "0" + deck[top];
+			cmd = whoseTurn + "" + MO + "0" + deck[top];
 		}else {
-			cmd = turn + "" + MO + "" + deck[top];
+			cmd = whoseTurn + "" + MO + "" + deck[top];
 		}
 
 		//
@@ -190,9 +189,9 @@ public class MahjongTable{
 	public void draw() {
 		String cmd = "";
 		if(deck[top] < 10) {
-			cmd = turn + "" + MO + "0" + deck[top];
+			cmd = whoseTurn + "" + MO + "0" + deck[top];
 		}else {
-			cmd = turn + "" + MO + "" + deck[top];
+			cmd = whoseTurn + "" + MO + "" + deck[top];
 		}
 		top++;
 		// boradcast(turn + "" + mo);
@@ -217,9 +216,9 @@ public class MahjongTable{
 		}
 		switch(operationId) {
 			case DA:
-				turn--;
-				if(turn == -1) {
-					turn = 3;
+				whoseTurn--;
+				if(whoseTurn == -1) {
+					whoseTurn = 3;
 				}
 				daMey = cmd;
 				cmdMey[playerId] = cmd;
@@ -257,11 +256,11 @@ public class MahjongTable{
 					// needHandle = false;
 					top = 0;
 					bottom = 135;
-					zhuangNum++;
-					if(zhuangNum >= 4) {
-						zhuangNum = 0;
+					whoIsZhuang++;
+					if(whoIsZhuang >= 4) {
+						whoIsZhuang = 0;
 					}
-					turn = zhuangNum;
+					whoseTurn = whoIsZhuang;
 					shuffle();
 					distribute();
 				}else {
@@ -269,9 +268,9 @@ public class MahjongTable{
 						isGang = false;
 						String pCmd = "";
 						if(deck[bottom] < 10) {
-							pCmd = turn + "" + MO_FROM_BOTTOM + "0" + deck[bottom];
+							pCmd = whoseTurn + "" + MO_FROM_BOTTOM + "0" + deck[bottom];
 						}else {
-							pCmd = turn + "" + MO_FROM_BOTTOM + "" + deck[bottom];
+							pCmd = whoseTurn + "" + MO_FROM_BOTTOM + "" + deck[bottom];
 						}
 						bottom--;
 						boradcast(pCmd);
@@ -302,11 +301,11 @@ public class MahjongTable{
 					}
 					if(tempOpe == GANG || tempOpe == PENG) {
 						tempCmd = s;
-						turn = Integer.parseInt(s.substring(0, 1));
+						whoseTurn = Integer.parseInt(s.substring(0, 1));
 					}
 					if(tempOpe == CHI && tempCmd.equals("")) {
 						tempCmd = s;
-						turn = Integer.parseInt(s.substring(0, 1));
+						whoseTurn = Integer.parseInt(s.substring(0, 1));
 					}
 				}
 				if(isHu) {

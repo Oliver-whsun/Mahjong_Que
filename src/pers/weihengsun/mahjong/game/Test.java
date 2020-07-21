@@ -1,10 +1,21 @@
 package pers.weihengsun.mahjong.game;
 
+import java.io.PrintWriter;
+
+import jdk.internal.org.objectweb.asm.tree.IntInsnNode;
+
 public class Test{
 	public static void main(String[] args){
+		//测试牌桌
+//		PrintWriter[] writers = new PrintWriter[4];
+//		for(int i=0; i<4; i++) {
+//			
+//		}
+//		MahjongTable table = new MahjongTable(writers);
+		
 		// MahjongTable table = new MahjongTable();
-		Player p1 = new Player("dian", 0);
-		AIPlayer ai = new AIPlayer("ai",1);
+//		Player p1 = new Player("dian", 0);
+//		AIPlayer ai = new AIPlayer("ai",1);
 
 		// //测试牌桌
 		// for(int i=table.top; i<table.deck.length; i++){
@@ -219,10 +230,10 @@ public class Test{
 		// System.out.println("当前牌牌型总分"+totalScore+"分");
 
 		//测试思考打牌函数
-		ai.draw_yourself(0,11); ai.draw_yourself(0,11); ai.draw_yourself(0,12); ai.draw_yourself(0,13); ai.draw_yourself(0,14); ai.draw_yourself(0,17); ai.draw_yourself(0,19);
-		ai.draw_yourself(0,22); ai.draw_yourself(0,23); ai.draw_yourself(0,24); ai.draw_yourself(0,33); ai.draw_yourself(0,38); ai.draw_yourself(0,39); ai.draw_yourself(0,55);
-		int moveIndex = ai.think_discard();
-		System.out.println("思考结果：应该打"+ai.n2p[ai.hands.get(moveIndex)]);
+//		ai.draw_yourself(0,11); ai.draw_yourself(0,11); ai.draw_yourself(0,12); ai.draw_yourself(0,13); ai.draw_yourself(0,14); ai.draw_yourself(0,17); ai.draw_yourself(0,19);
+//		ai.draw_yourself(0,22); ai.draw_yourself(0,23); ai.draw_yourself(0,24); ai.draw_yourself(0,33); ai.draw_yourself(0,38); ai.draw_yourself(0,39); ai.draw_yourself(0,55);
+//		int moveIndex = ai.think_discard();
+//		System.out.println("思考结果：应该打"+ai.n2p[ai.hands.get(moveIndex)]);
 
 		//测试思考是否碰
 		// ai.draw_yourself(0,13); ai.draw_yourself(0,13); ai.draw_yourself(0,16); 
