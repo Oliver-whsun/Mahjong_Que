@@ -2,7 +2,6 @@ package pers.weihengsun.mahjong.game;
 
 import java.io.PrintWriter;
 
-import jdk.internal.org.objectweb.asm.tree.IntInsnNode;
 
 public class Test{
 	public static void main(String[] args){
