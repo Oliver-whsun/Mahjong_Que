@@ -16,10 +16,9 @@ public class MahjongTable{
 	public static final int HU = 0; //玩家胡牌
 //	private static final int again = 60;
 	
-	public static final int NUM_OF_TILES = 136; //麻将牌总数，136 = 9*3*4 + 7*4
+	public static final int NUM_OF_TILES = 144; //麻将牌总数，144 = 9*3*4 + 7*4 + 8
 	public static final int NUM_OF_HANDS = 13; //标准手牌数，即无摸牌、无副露时应该有13张手牌
 	
-	private boolean hasWinner = false; // if hu or not, 当前局是否有玩家胡牌
 	
 	/*
 	牌用数字表示
@@ -33,6 +32,8 @@ public class MahjongTable{
 	数字 {41 43 45 47 } 表示 { 东 南 西 北 }
 
 	数字 {51 53 55} 表示 {中 發 白}
+	
+	数字{61 ~ 68} 表示{春夏秋冬梅兰竹菊}
 	*/
 	public static final String[] NUMBER_2_TILE = { // 编码表
 		"无效","无效","无效","无效","无效","无效","无效","无效","无效","无效",
@@ -40,16 +41,38 @@ public class MahjongTable{
 		"无效","一条","二条","三条","四条","五条","六条","七条","八条","九条",
 		"无效","一筒","二筒","三筒","四筒","五筒","六筒","七筒","八筒","九筒",
 		"无效","東风","无效","南风","无效","西风","无效","北风","无效","无效",
-		"无效","红中","无效","發财","无效","白板"};
+		"无效","红中","无效","發财","无效","白板","无效","北风","无效","无效",
+		"无效","壹春","贰夏","叁秋","肆冬","伍梅","陆兰","柒竹","捌菊","无效"};
+	
+	private boolean hasWinner = false; //当前局是否有玩家胡牌
 
-	private int[] deck = null; //牌库：长度136(牌的总数，不含花牌)，内容是牌的数字
+	private int[] deck = null; //牌库：长度144，内容是牌的编号
 	private int top; //牌库顶指针(角标)
 	private int bottom; //牌库底指针(角标)
+	private String[] cmdMey = new String[4];
+	private String daMey = null;
+	private boolean isGang = false;
 	public int whoIsZhuang; //庄家玩家编号
 	public int whoseTurn; // turn of player, 当前轮次玩家编号
-	Hashtable<Integer, Integer> discardPile = null; //弃牌堆，key是牌的编号，value是已经出现的张数(包括打掉的，吃碰杠亮出来的)
+	/*
+	 * 花牌堆
+	 * 每位玩家都拥有一个花牌堆，里面存放着花牌的编号
+	 */
+	public List<Integer>[] huaPiles = null;
+	/*
+	 * 副露堆
+	 * 每位玩家都拥有一个副露堆，里面存放着副露对象
+	 */
+	public List<Fulu>[] fuluPiles = null;
+	/**
+	 * 弃牌堆
+	 * 每位玩家自己面前拥有弃牌堆
+	 * 按时间顺序记录打出的牌
+	 * 但是被吃碰杠拿走的牌进入他人的副露而非弃牌堆
+	 */
+	public List<Integer>[] discardPiles = null; 
 	// writers
-	PrintWriter[] writers;
+	public PrintWriter[] writers;
 
 	MahjongTable(PrintWriter[] writers){ //构造函数
 
@@ -58,63 +81,24 @@ public class MahjongTable{
 		this.top = 0;
 		this.bottom = NUM_OF_TILES - 1;
 		this.whoIsZhuang = 0; //第一局“東”坐庄
-		this.discardPile = new Hashtable<Integer,Integer>();
 		this.whoseTurn = this.whoIsZhuang;
-		//把136张牌按顺序放入牌库
-		//一万到九万各四张
-		int wan = 11;
-		for(int i=0; i<9; i++){
-			for(int j=0; j<4; j++){
-				deck[top] = wan;
-				top ++;
-			}
-			wan ++;
-		}
-		//一条到九条各四张
-		int tiao = 21;
-		for(int i=0; i<9; i++){
-			for(int j=0; j<4; j++){
-				deck[top] = tiao;
-				top ++;
-			}
-			tiao ++;
-		}
-		//一筒到九筒各四张
-		int tong = 31;
-		for(int i=0; i<9; i++){
-			for(int j=0; j<4; j++){
-				deck[top] = tong;
-				top ++;
-			}
-			tong ++;
-		}
-		//东南西北风各四张
-		int feng = 41;
-		for(int i=0; i<4; i++){
-			for(int j=0; j<4; j++){
-				deck[top] = feng;
-				top ++;
-			}
-			feng += 2;
-		}
-		//中发白箭牌各四张
-		int jian = 51;
-		for(int i=0; i<3; i++){
-			for(int j=0; j<4; j++){
-				deck[top] = jian;
-				top ++;
-			}
-			jian += 2;
-		}
+		deckInit();
 		//洗牌
 		this.shuffle();
 	}//构造函数结束
 
+	/**
+	 * 洗牌
+	 * 重置牌库顶、底角标
+	 * 重置弃牌堆、副露堆、花牌堆
+	 */
 	public void shuffle(){ //成员函数，洗牌，重置牌库顶、底角标，重置弃牌堆
 		System.out.println("正在洗牌");
 		this.top = 0;
 		this.bottom = NUM_OF_TILES -1;
-		this.discardPile = new Hashtable<Integer,Integer>();
+		discardPilesInit();
+		fuluPilesInit();
+		huaPilesInit();
 		int length = deck.length;
 		Random rand = new Random();
 		for(int i=length; i>0; i--){
@@ -198,9 +182,6 @@ public class MahjongTable{
 		boradcast(cmd);
 	}
 
-	String[] cmdMey = new String[4];
-	String daMey = null;
-	boolean isGang = false;
 	// command handler
 	public void cmdHandler(String cmd) {
 		// if(!needHandle) {
@@ -394,4 +375,84 @@ public class MahjongTable{
 	// 	MahjongTable test = new MahjongTable(null);
 	// 	test.cmdHandler("0-110");
 	// }
+	
+	@SuppressWarnings("unchecked")
+	private void huaPilesInit() {
+		this.huaPiles = new List[4];
+		for(int i=0; i<4; i++) {
+			huaPiles[i] = new LinkedList<Integer>();
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	private void fuluPilesInit() {
+		this.fuluPiles = new List[4];
+		for(int i=0; i<4; i++) {
+			fuluPiles[i] = new LinkedList<Fulu>();
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	private void discardPilesInit() {
+		this.discardPiles = new List[4];
+		for(int i=0; i<4; i++) {
+			discardPiles[i] = new LinkedList<Integer>();
+		}
+	}
+	
+	private void deckInit() {
+		//把144张牌按顺序放入牌库
+				//一万到九万各四张
+				int wan = 11;
+				for(int i=0; i<9; i++){
+					for(int j=0; j<4; j++){
+						deck[top] = wan;
+						top ++;
+					}
+					wan ++;
+				}
+				//一条到九条各四张
+				int tiao = 21;
+				for(int i=0; i<9; i++){
+					for(int j=0; j<4; j++){
+						deck[top] = tiao;
+						top ++;
+					}
+					tiao ++;
+				}
+				//一筒到九筒各四张
+				int tong = 31;
+				for(int i=0; i<9; i++){
+					for(int j=0; j<4; j++){
+						deck[top] = tong;
+						top ++;
+					}
+					tong ++;
+				}
+				//东南西北风各四张
+				int feng = 41;
+				for(int i=0; i<4; i++){
+					for(int j=0; j<4; j++){
+						deck[top] = feng;
+						top ++;
+					}
+					feng += 2;
+				}
+				//中发白箭牌各四张
+				int jian = 51;
+				for(int i=0; i<3; i++){
+					for(int j=0; j<4; j++){
+						deck[top] = jian;
+						top ++;
+					}
+					jian += 2;
+				}
+				//花牌总计八张
+				int hua = 61;
+				for(int i=0; i<8; i++) {
+					deck[top] = hua;
+					top++;
+					hua++;
+				}
+	}
 }
